@@ -80,7 +80,21 @@ class PointNetFeat(nn.Module):
         """
 
         # TODO : Implement forward function.
-        pass
+
+        # pass through first T-net
+        if self.input_transform:
+            out = self.stn3(pointcloud.transpose(1, 2)) # out1: [B,3,3]
+            pointcloud = torch.bmm(out, pointcloud) # pointcloud1: [B,3,N]
+        
+        # pass through point-wise mlp (convnet) to 64 dim
+        pointcloud = F.relu(self.conv1(pointcloud))
+
+        # pass through second T-net
+        if self.feature_transform:
+            out = self.stn64
+
+
+
 
 
 class PointNetCls(nn.Module):
