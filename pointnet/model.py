@@ -69,6 +69,12 @@ class PointNetFeat(nn.Module):
 
         # point-wise mlp
         # TODO : Implement point-wise mlp model based on PointNet Architecture.
+        self.conv1 = nn.Sequential(nn.Conv1d(3, 64, 1), nn.BatchNorm1d(64))
+        self.conv2 = nn.Sequential(nn.Conv1d(64, 64, 1), nn.BatchNorm1d(64))
+
+        self.conv3 = nn.Sequential(nn.Conv1d(64, 64, 1), nn.BatchNorm1d(64))
+        self.conv4 = nn.Sequential(nn.Conv1d(64, 128, 1), nn.BatchNorm1d(128))
+        self.conv5 = nn.Sequential(nn.Conv1d(128, 1024, 1), nn.BatchNorm1d(1024))
 
     def forward(self, pointcloud):
         """
@@ -88,10 +94,23 @@ class PointNetFeat(nn.Module):
         
         # pass through point-wise mlp (convnet) to 64 dim
         pointcloud = F.relu(self.conv1(pointcloud))
+        pointcloud = F.relu(self.conv2(pointcloud))
 
         # pass through second T-net
         if self.feature_transform:
-            out = self.stn64
+            out = self.stn64(pointcloud) # out: [B,64,64]
+            pointcloud = torch.bmm(out, pointcloud) # pointcloud: [B,64,N]
+        
+        # pass through point-wise mlp (convnet) to 1024 dim
+        pointcloud = F.relu(self.conv3(pointcloud)) # pointcloud: [B,64,N]
+        pointcloud = F.relu(self.conv4(pointcloud)) # pointcloud: [B,128,N]
+        pointcloud = F.relu(self.conv5(pointcloud)) # pointcloud: [B,1024,N]
+
+        # max pool
+        global_feature = torch.max(pointcloud, 2)[0] # global_feature: [B,1024]
+        return global_feature
+        
+
 
 
 
